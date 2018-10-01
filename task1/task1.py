@@ -1,11 +1,32 @@
 import csv
 import numpy as np
+from sklearn import linear_model
+
 
 TRAIN_M = 1212
 TRAIN_N = 887
 
-X_train = np.array((TRAIN_M, TRAIN_N))
-y_train = np.array((TRAIN_M, 1))
+TEST_M = 776
+TEST_N = 887
+
+def __load_test_data():
+    # Load X_test
+    with open('X_test.csv') as csvfile:
+        reader = csv.DictReader(csvfile)
+        feature_string_matrix = []
+        for row in reader:
+            feature_list = []
+            for i in range(TEST_N):
+                x_value = row['x' + str(i)]
+                # Hit missing values
+                if x_value == '':
+                    feature_list.append(np.nan)
+                else:
+                    feature_list.append(float(row['x' + str(i)]))
+            feature_string_matrix.append(feature_list)
+        X_test = np.array(feature_string_matrix)
+
+        return X_test
 
 def __load_train_data():
     # Load X_train
@@ -35,4 +56,5 @@ def __load_train_data():
     return X_train, y_train
 
 X_train, y_train = __load_train_data()
-pass
+X_test = __load_test_data()
+
