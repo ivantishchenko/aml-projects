@@ -1,12 +1,18 @@
 import csv
 import numpy as np
-from sklearn import linear_model
 
+from sklearn import linear_model
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+
+# Constants
 TRAIN_M = 1212
 TRAIN_N = 887
 
 TEST_M = 776
 TEST_N = 887
+
+# Start of the helper functions
 
 '''
 Load the test data
@@ -65,6 +71,19 @@ def __load_train_data():
 
 
 '''
+Produce the CSV of a solution
+'''
+
+
+def __produce_solution(y):
+    with open('out.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',', lineterminator="\n")
+        writer.writerow(['id', 'y'])
+        for i in range(y.shape[0]):
+            writer.writerow([float(i), y[i, 0]])
+
+
+'''
 Complete missing values in the data matrix
 '''
 
@@ -77,18 +96,33 @@ def __complete_matrix(X):
     X[idxs] = np.take(col_mean, idxs[1])
 
 
+'''
+Solution 1
+'''
+
 # Load data
-X_train, y_train = __load_train_data()
+X, y = __load_train_data()
 X_test = __load_test_data()
 
 # Do data processing
-
-# Replace NaNs by the colum means
-__complete_matrix(X_train)
+# 1. Replace NaNs by the colum means
+__complete_matrix(X)
 __complete_matrix(X_test)
 
-# Do regression
+# Validation and training split
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.10, random_state=42)
+
+# Do regression on the Validation data
 reg = linear_model.LinearRegression()
 reg.fit(X_train, y_train)
-y_test = reg.predict(X_test)
-pass
+prediction_val = reg.predict(X_val)
+
+# Calculate the metric
+score = r2_score(y_val, prediction_val)
+print("Coefficient of Determination = {}".format(score))
+
+# Do regression on the Test data
+prediction_test = reg.predict(X_test)
+
+# Produce the CSV solution
+__produce_solution(prediction_test)
