@@ -72,4 +72,4 @@ def produce_solution(y):
         writer = csv.writer(csvfile, delimiter=',', lineterminator="\n")
         writer.writerow(['id', 'y'])
         for i in range(y.shape[0]):
-            writer.writerow([float(i), y[i, 0]])
+            writer.writerow([float(i), y[i]])
