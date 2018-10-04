@@ -60,6 +60,8 @@ def load_train_data():
             y_value = [float(row['y'])]
             y_string.append(y_value)
         y_train = np.array(y_string)
+
+    y_train = y_train.reshape(-1, 1)
     return X_train, y_train
 
 
@@ -72,4 +74,4 @@ def produce_solution(y):
         writer = csv.writer(csvfile, delimiter=',', lineterminator="\n")
         writer.writerow(['id', 'y'])
         for i in range(y.shape[0]):
-            writer.writerow([float(i), y[i]])
+            writer.writerow([float(i), y[i, 0]])
