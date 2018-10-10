@@ -63,6 +63,7 @@ Solution 1
 print("1. Loading the data\n")
 X, y = util.load_train_data()
 X_test = util.load_test_data()
+y = y.ravel()
 
 # Do data processing
 # 1. Replace NaNs by the colum means
@@ -86,7 +87,7 @@ y = y[outliers == 1]
 
 # 4. Feature selection
 # 887 -> 96
-select = feature_selection.SelectFromModel(ensemble.RandomForestRegressor(n_estimators=100, random_state=42))
+select = feature_selection.SelectFromModel(ensemble.RandomForestRegressor(n_estimators=200, random_state=42))
 select.fit(X, y)
 X = select.transform(X)
 
