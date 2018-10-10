@@ -13,7 +13,8 @@ from sklearn import ensemble
 from sklearn import neural_network
 from sklearn import svm
 from sklearn import kernel_ridge
-
+from sklearn import model_selection
+from sklearn import tree
 
 # Constants
 import util_data as util
@@ -66,11 +67,6 @@ X_test = util.load_test_data()
 # Do data processing
 # 1. Replace NaNs by the colum means
 print("2. Starting preprocessing the data\n")
-# imp = impute.SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-# imp.fit(X)
-#
-# X = imp.transform(X)
-# X_test = imp.transform(X_test)
 __complete_matrix_colmean(X)
 __complete_matrix_colmean(X_test)
 
@@ -80,7 +76,6 @@ X = scaler.transform(X)
 X_test = scaler.transform(X_test)
 
 # 3. Outlier detection
-# LocalOutlierFactor
 lof = neighbors.LocalOutlierFactor(n_neighbors=60, contamination=0.005)
 outliers = lof.fit_predict(X)
 
@@ -90,20 +85,17 @@ X = X[outliers == 1]
 y = y[outliers == 1]
 
 # 4. Feature selection
-
-
-# 5. Polynomial Features
-# poly = preprocessing.PolynomialFeatures(2)
-# X = poly.fit_transform(X)
-# X_test = poly.fit_transform(X_test)
+# 887 -> 96
+select = feature_selection.SelectFromModel(ensemble.RandomForestRegressor(n_estimators=100, random_state=42))
+select.fit(X, y)
+X = select.transform(X)
 
 # Validation and training split K Folds
 print("3. Doing validation and training split\n")
-
 print("4. Performing regression\n")
-reg = ensemble.RandomForestRegressor(n_estimators=100)
-# reg = svm.SVR(kernel='poly')
-# reg = linear_model.ElasticNet(alpha=0.6)
+
+reg = ensemble.AdaBoostRegressor(tree.DecisionTreeRegressor(max_depth=50), n_estimators=1000, random_state=42)
+# reg = ensemble.RandomForestRegressor(n_estimators=200)
 reg_scores = cross_val_score(reg, X, y, cv=10, scoring='r2')
 
 # Calculate the metric
@@ -119,6 +111,7 @@ print("6. Training on the whole set\n")
 reg.fit(X, y)
 
 print("7. Generating predictions\n")
+X_test = select.transform(X_test)
 prediction_test = reg.predict(X_test)
 # Produce the CSV solution
 util.produce_solution(prediction_test)
