@@ -1,5 +1,6 @@
 .idea/
 */__pycache__/
 task2/*.csv
-task2/*.csv
 task2/*.npy
+task3/*.csv
+task3/*.npy
