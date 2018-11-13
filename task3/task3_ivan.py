@@ -88,17 +88,121 @@ assert (len(sys.argv) > 1)
 #         X_new[i] = new_feature
 #     return X_new
 
+# def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
+#     M = X.shape[0]
+#     N = X.shape[1]
+#     NUM_INTERVAL = 20
+#     NUM_BINS_HISTO = 20
+#     X_new = np.zeros((M, BEAT_LEN + NUM_INTERVAL * 2 + NUM_INTERVAL * NUM_BINS_HISTO))
+#     for i in range(M):
+#         ecg_res = ecg.ecg(X[i], 300, False)
+#         rate = ecg_res['heart_rate']
+#         x_filtered = ecg_res['filtered']
+#         r_peak = ecg_res['rpeaks']
+#
+#         # FEATURE 1
+#         if rate.size == 0:
+#             rate_feature = np.zeros(BEAT_LEN)
+#         elif rate.size < BEAT_LEN:
+#             pad_len = round((BEAT_LEN - rate.size) / 2.00 + 0.001)
+#             rate_feature = np.pad(rate, pad_len, 'symmetric')[0:BEAT_LEN]
+#         elif rate.size > BEAT_LEN:
+#             rate_feature = rate[0:BEAT_LEN]
+#
+#         rate_feature = np.reshape(rate_feature, (-1, 1))
+#
+#         # FEATURE 2
+#         idx_space = np.linspace(0, N, NUM_INTERVAL+1)
+#         mean_vec = []
+#         std_vec = []
+#         histogram_feature = np.array([])
+#         for j in range(1, len(idx_space)):
+#             interval = x_filtered[int(idx_space[j - 1]):int(idx_space[j])]
+#             mean_interval = np.mean(interval)
+#             std_interval = np.std(interval)
+#             mean_vec.append(mean_interval)
+#             std_vec.append(std_interval)
+#             hist, _ = np.histogram(interval, bins=NUM_BINS_HISTO)
+#             histogram_feature = np.append(histogram_feature, hist)
+#
+#         mean_feature = np.array(mean_vec)
+#         std_feature = np.array(std_vec)
+#
+#         # prev_idx = 0
+#         # for peak_idx in r_peak:
+#         #     RR_interval = x_filtered[prev_idx:peak_idx]
+#         #     prev_idx = peak_idx
+#         #     RR_histogram, _ = np.histogram(RR_interval, bins=20)
+#
+#         rate_feature = rate_feature.ravel()
+#         new_feature = np.array([])
+#         new_feature = np.append(new_feature, rate_feature)
+#         new_feature = np.append(new_feature, histogram_feature)
+#         new_feature = np.append(new_feature, mean_feature)
+#         new_feature = np.append(new_feature, std_feature)
+#
+#         X_new[i] = new_feature
+#
+#     return X_new
+
+# def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
+#     M = X.shape[0]
+#     N = X.shape[1]
+#     NUM_INTERVAL = 20
+#     NUM_BINS_HISTO = 20
+#     SPLIT_T = 40
+#
+#     X_new = []
+#     idx_template = np.linspace(0, 180, SPLIT_T+1)
+#     for i in range(M):
+#         new_feature = []
+#         ecg_res = ecg.ecg(X[i], 300, False)
+#         template = ecg_res['templates']
+#         r_peak = ecg_res['rpeaks']
+#
+#         mean_vec = np.mean(template, axis=0)
+#         var_vec = np.var(template, axis=0)
+#         new_feature.extend(mean_vec)
+#         new_feature.extend(var_vec)
+#
+#         for i in range(1, len(idx_template)):
+#             data = np.ravel(template[:, int(idx_template[i - 1]):int(idx_template[i])])
+#             hist, _ = np.histogram(data, bins=NUM_BINS_HISTO, density=True)
+#             new_feature.extend(hist)
+#
+#         rr_diff = np.diff(r_peak)
+#         if len(rr_diff) > 0:
+#             hist, _ = np.histogram(rr_diff, bins=NUM_BINS_HISTO, density=True)
+#             new_feature.extend(hist)
+#         else:
+#             new_feature.extend(np.zeros(NUM_BINS_HISTO))
+#
+#         X_new.append(new_feature)
+#
+#     X_new = np.array(X_new)
+#     print(X_new.shape)
+#     return X_new
+
 def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
     M = X.shape[0]
     N = X.shape[1]
     NUM_INTERVAL = 20
     NUM_BINS_HISTO = 20
-    X_new = np.zeros((M, BEAT_LEN + NUM_INTERVAL * 2 + NUM_INTERVAL * NUM_BINS_HISTO))
+    SPLIT_T = 40
+
+    X_new = []
+
+    idx_template = np.linspace(0, 180, SPLIT_T + 1)
     for i in range(M):
+        new_feature = []
         ecg_res = ecg.ecg(X[i], 300, False)
+
+        templates = ecg_res['templates']
+        templates_ts = ecg_res['templates_ts']
+        r_peak = ecg_res['rpeaks']
         rate = ecg_res['heart_rate']
         x_filtered = ecg_res['filtered']
-        r_peak = ecg_res['rpeaks']
+        r_peaks = ecg_res['rpeaks']
 
         # FEATURE 1
         if rate.size == 0:
@@ -108,42 +212,32 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
             rate_feature = np.pad(rate, pad_len, 'symmetric')[0:BEAT_LEN]
         elif rate.size > BEAT_LEN:
             rate_feature = rate[0:BEAT_LEN]
-
-        rate_feature = np.reshape(rate_feature, (-1, 1))
-
+        rate_feature = np.reshape(rate_feature, (-1, ))
+        new_feature.extend(rate_feature)
         # FEATURE 2
-        idx_space = np.linspace(0, N, NUM_INTERVAL+1)
-        mean_vec = []
-        std_vec = []
-        histogram_feature = np.array([])
-        for j in range(1, len(idx_space)):
-            interval = x_filtered[int(idx_space[j - 1]):int(idx_space[j])]
-            mean_interval = np.mean(interval)
-            std_interval = np.std(interval)
-            mean_vec.append(mean_interval)
-            std_vec.append(std_interval)
-            hist, _ = np.histogram(interval, bins=NUM_BINS_HISTO)
-            histogram_feature = np.append(histogram_feature, hist)
+        # new_feature.extend(np.mean(template, axis=0))
+        # new_feature.extend(np.var(template, axis=0))
+        # new_feature.extend(templates_ts)
 
-        mean_feature = np.array(mean_vec)
-        std_feature = np.array(std_vec)
+        # FEATURE 3
+        rr_diff = np.diff(r_peaks)
 
-        # prev_idx = 0
-        # for peak_idx in r_peak:
-        #     RR_interval = x_filtered[prev_idx:peak_idx]
-        #     prev_idx = peak_idx
-        #     RR_histogram, _ = np.histogram(RR_interval, bins=20)
+        if len(rr_diff) > 0:
+            hist, _ = np.histogram(rr_diff, bins=NUM_BINS_HISTO)
+            new_feature.extend(hist)
+        else:
+            new_feature.extend(np.zeros(NUM_BINS_HISTO))
 
-        rate_feature = rate_feature.ravel()
-        new_feature = np.array([])
-        new_feature = np.append(new_feature, rate_feature)
-        new_feature = np.append(new_feature, histogram_feature)
-        new_feature = np.append(new_feature, mean_feature)
-        new_feature = np.append(new_feature, std_feature)
+        # All features
+        X_new.append(new_feature)
 
-        X_new[i] = new_feature
-
+    X_new = np.array(X_new)
+    print(X_new.shape)
     return X_new
+
+'''
+TRAINING
+'''
 
 # Read data
 # print('Creating npy objects...')
@@ -167,12 +261,12 @@ X_test = X_test[:, 1:]
 print('Heart beats TRAIN...\n')
 X_train[np.isnan(X_train)] = 0
 X_train = select_features_combo(X_train)
-np.save('X_train_combo', X_train)
-X_train = np.load('X_train_combo.npy')
+# np.save('X_train_combo', X_train)
+# X_train = np.load('X_train_combo.npy')
 
-# print('Heart beats TEST...\n')
-# X_test[np.isnan(X_test)] = 0
-# X_test = select_features(X_test)
+print('Heart beats TEST...\n')
+X_test[np.isnan(X_test)] = 0
+X_test = select_features_combo(X_test)
 # np.save('X_test_beats', X_test)
 # X_test = np.load('X_test_beats.npy')
 
@@ -186,8 +280,8 @@ print("Averaged F1 = {}".format(np.mean(clf_scores)))
 print("STD of N scores = {}".format(np.std(clf_scores)))
 clf.fit(X_train, Y_train.ravel())
 
-# print('\nPredicting...')
-# Y_test = clf.predict(X_test)
-#
-# np.savetxt("out_%s.csv" % sys.argv[1], np.stack((X_test_ids, Y_test), axis=1), delimiter=",", header="id,y",
-#            fmt='%d', comments='')
+print('\nPredicting...')
+Y_test = clf.predict(X_test)
+
+np.savetxt("out_%s.csv" % sys.argv[1], np.stack((X_test_ids, Y_test), axis=1), delimiter=",", header="id,y",
+           fmt='%d', comments='')
