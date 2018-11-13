@@ -215,11 +215,10 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
         rate_feature = np.reshape(rate_feature, (-1, ))
         new_feature.extend(rate_feature)
         # FEATURE 2
-        # new_feature.extend(np.mean(template, axis=0))
-        # new_feature.extend(np.var(template, axis=0))
+        new_feature.extend(np.mean(templates, axis=0))
+        new_feature.extend(np.var(templates, axis=0))
         # FEATURE 3
         rr_diff = np.diff(r_peaks)
-
         if len(rr_diff) > 0:
             hist, _ = np.histogram(rr_diff, bins=NUM_BINS_HISTO)
             new_feature.extend(hist)
@@ -269,7 +268,7 @@ X_test = select_features_combo(X_test)
 # X_test = np.load('X_test_beats.npy')
 
 print('Cross-validating...\n')
-clf = ensemble.RandomForestClassifier(n_estimators=200, max_depth=10, random_state=0)
+clf = ensemble.RandomForestClassifier(n_estimators=200, max_depth=30, random_state=0)
 
 clf_scores = model_selection.cross_val_score(clf, X_train, Y_train, cv=10, scoring='f1_micro')
 print("\nCalculating the score")
