@@ -19,6 +19,8 @@ from sklearn.gaussian_process.kernels import RBF
 from sklearn import preprocessing
 from sklearn import neighbors
 from imblearn.under_sampling import TomekLinks
+from imblearn.under_sampling import ClusterCentroids
+from imblearn.over_sampling import SMOTE
 
 '''
 Solution 1
@@ -101,8 +103,13 @@ X_test_ids = X_test[:, 0]
 X_test = X_test[:, 1:]
 
 print('\nPrepocessing the dataset')
-tl = TomekLinks(return_indices=True, ratio='majority')
-X_train, Y_train, id_tl = tl.fit_sample(X_train, Y_train.ravel())
+tomek = TomekLinks(return_indices=False, ratio='majority')
+X_train, Y_train = tomek.fit_sample(X_train, Y_train.ravel())
+
+# count the number of classes
+unique, counts = np.unique(Y_train, return_counts=True)
+clas_dict = dict(zip(unique, counts))
+print('\nNumber of classes = {}'.format(clas_dict))
 
 # scaler = preprocessing.StandardScaler().fit(X_train)
 # X_train = scaler.transform(X_train)
