@@ -1,0 +1,4 @@
+- Add feature with histrogram of amplitudes of RPeaks
+- Cross validate different classifiers
+- Engineer other features suggested at https://ml2.inf.ethz.ch/courses/aml/tutorials/Tutorial-Project3.pdf
+- Engineer the feature with variance and mean across RR Intervals
