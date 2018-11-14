@@ -1,16 +1,8 @@
 import numpy as np
 import sys
-from sklearn import svm
 from sklearn import model_selection
 from biosppy.signals import ecg
-from biosppy.signals import tools
 from sklearn import ensemble
-from sklearn import tree
-from imblearn.over_sampling import SMOTE
-from imblearn.combine import SMOTETomek
-from imblearn.under_sampling import TomekLinks
-from imblearn.under_sampling import ClusterCentroids
-from pywt import wavedec
 
 assert (len(sys.argv) > 1)
 
