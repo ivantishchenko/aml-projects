@@ -185,24 +185,21 @@ assert (len(sys.argv) > 1)
 
 def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
     M = X.shape[0]
-    N = X.shape[1]
-    NUM_INTERVAL = 20
     NUM_BINS_HISTO = 20
-    SPLIT_T = 40
 
     X_new = []
-
-    idx_template = np.linspace(0, 180, SPLIT_T + 1)
     for i in range(M):
         new_feature = []
         ecg_res = ecg.ecg(X[i], 300, False)
 
         templates = ecg_res['templates']
-        templates_ts = ecg_res['templates_ts']
-        r_peak = ecg_res['rpeaks']
         rate = ecg_res['heart_rate']
         x_filtered = ecg_res['filtered']
         r_peaks = ecg_res['rpeaks']
+
+        r_peaks_christov = ecg.christov_segmenter(x_filtered, sampling_rate=300)['rpeaks']
+        r_peaks_engzee = ecg.engzee_segmenter(x_filtered, sampling_rate=300)['rpeaks']
+        r_peaks_hamilton = ecg.hamilton_segmenter(x_filtered, sampling_rate=300)['rpeaks']
 
         # FEATURE 1
         if rate.size == 0:
@@ -221,6 +218,27 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
         rr_diff = np.diff(r_peaks)
         if len(rr_diff) > 0:
             hist, _ = np.histogram(rr_diff, bins=NUM_BINS_HISTO)
+            new_feature.extend(hist)
+        else:
+            new_feature.extend(np.zeros(NUM_BINS_HISTO))
+        # FEATURE 4
+        rr_diff_christov = np.diff(r_peaks_christov)
+        rr_diff_engzee = np.diff(r_peaks_engzee)
+        rr_diff_hamilton = np.diff(r_peaks_hamilton)
+        if len(rr_diff_christov) > 0:
+            hist, _ = np.histogram(rr_diff_christov, bins=NUM_BINS_HISTO)
+            new_feature.extend(hist)
+        else:
+            new_feature.extend(np.zeros(NUM_BINS_HISTO))
+
+        if len(rr_diff_engzee) > 0:
+            hist, _ = np.histogram(rr_diff_engzee, bins=NUM_BINS_HISTO)
+            new_feature.extend(hist)
+        else:
+            new_feature.extend(np.zeros(NUM_BINS_HISTO))
+
+        if len(rr_diff_hamilton) > 0:
+            hist, _ = np.histogram(rr_diff_hamilton, bins=NUM_BINS_HISTO)
             new_feature.extend(hist)
         else:
             new_feature.extend(np.zeros(NUM_BINS_HISTO))
