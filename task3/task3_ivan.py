@@ -3,6 +3,8 @@ import sys
 from sklearn import model_selection
 from biosppy.signals import ecg
 from sklearn import ensemble
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.svm import SVC
 import time
 
 assert (len(sys.argv) > 1)
@@ -269,12 +271,13 @@ X_test_ids = X_test[:, 0]
 X_test = X_test[:, 1:]
 
 print('Heart beats TRAIN...\n')
-X_train[np.isnan(X_train)] = 0
-X_train = select_features_combo(X_train)
-np.save('X_train_combo', X_train)
-# X_train = np.load('X_train_combo.npy')
+# X_train[np.isnan(X_train)] = 0
+# X_train = select_features_combo(X_train)
+# np.save('X_train_combo', X_train)
+X_train = np.load('X_train_combo.npy')
 
 print('Cross-validating...\n')
+# clf = SVC(kernel='rbf', class_weight='balanced')
 clf = ensemble.RandomForestClassifier(n_estimators=200, max_depth=30, random_state=0)
 
 clf_scores = model_selection.cross_val_score(clf, X_train, Y_train, cv=10, scoring='f1_micro')
@@ -288,7 +291,7 @@ print('Heart beats TEST...\n')
 X_test[np.isnan(X_test)] = 0
 X_test = select_features_combo(X_test)
 np.save('X_test_combo', X_test)
-# X_test = np.load('X_test_beats.npy')
+# X_test = np.load('X_test_combo.npy')
 
 print('\nPredicting...')
 Y_test = clf.predict(X_test)
