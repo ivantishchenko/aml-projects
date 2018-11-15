@@ -3,6 +3,7 @@ import sys
 from sklearn import model_selection
 from biosppy.signals import ecg
 from sklearn import ensemble
+import time
 
 assert (len(sys.argv) > 1)
 
@@ -246,6 +247,7 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
 '''
 TRAINING
 '''
+start = time.time()
 
 # Read data
 # print('Creating npy objects...')
@@ -269,14 +271,8 @@ X_test = X_test[:, 1:]
 print('Heart beats TRAIN...\n')
 X_train[np.isnan(X_train)] = 0
 X_train = select_features_combo(X_train)
-# np.save('X_train_combo', X_train)
+np.save('X_train_combo', X_train)
 # X_train = np.load('X_train_combo.npy')
-
-print('Heart beats TEST...\n')
-X_test[np.isnan(X_test)] = 0
-X_test = select_features_combo(X_test)
-# np.save('X_test_beats', X_test)
-# X_test = np.load('X_test_beats.npy')
 
 print('Cross-validating...\n')
 clf = ensemble.RandomForestClassifier(n_estimators=200, max_depth=30, random_state=0)
@@ -288,8 +284,17 @@ print("Averaged F1 = {}".format(np.mean(clf_scores)))
 print("STD of N scores = {}".format(np.std(clf_scores)))
 clf.fit(X_train, Y_train.ravel())
 
+print('Heart beats TEST...\n')
+X_test[np.isnan(X_test)] = 0
+X_test = select_features_combo(X_test)
+np.save('X_test_combo', X_test)
+# X_test = np.load('X_test_beats.npy')
+
 print('\nPredicting...')
 Y_test = clf.predict(X_test)
 
 np.savetxt("out_%s.csv" % sys.argv[1], np.stack((X_test_ids, Y_test), axis=1), delimiter=",", header="id,y",
            fmt='%d', comments='')
+
+end = time.time()
+print(end - start)
