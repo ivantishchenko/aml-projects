@@ -180,7 +180,10 @@ assert (len(sys.argv) > 1)
 
 def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
     M = X.shape[0]
+    N = X.shape[1]
+    NUM_SPLIT = 20
     NUM_BINS_HISTO = 20
+    signal_space = np.linspace(0, N, NUM_SPLIT + 1)
 
     X_new = []
     for i in range(M):
@@ -190,6 +193,7 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
         rate = ecg_res['heart_rate']
         x_filtered = ecg_res['filtered']
         r_peaks = ecg_res['rpeaks']
+
         # FEATURE 1
         if rate.size == 0:
             rate_feature = np.zeros(BEAT_LEN)
@@ -198,11 +202,13 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
             rate_feature = np.pad(rate, pad_len, 'symmetric')[0:BEAT_LEN]
         elif rate.size > BEAT_LEN:
             rate_feature = rate[0:BEAT_LEN]
-        rate_feature = np.reshape(rate_feature, (-1, ))
+        rate_feature = np.reshape(rate_feature, (-1,))
         new_feature.extend(rate_feature)
+
         # FEATURE 2
         new_feature.extend(np.mean(templates, axis=0))
         new_feature.extend(np.var(templates, axis=0))
+
         # FEATURE 3
         rr_diff = np.diff(r_peaks)
         if len(rr_diff) > 0:
@@ -210,6 +216,7 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
             new_feature.extend(hist)
         else:
             new_feature.extend(np.zeros(NUM_BINS_HISTO))
+
         # FEATURE 4
         r_peaks_christov = ecg.christov_segmenter(x_filtered, sampling_rate=300)['rpeaks']
         r_peaks_engzee = ecg.engzee_segmenter(x_filtered, sampling_rate=300)['rpeaks']
@@ -235,6 +242,7 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
             new_feature.extend(hist)
         else:
             new_feature.extend(np.zeros(NUM_BINS_HISTO))
+
         # FEATURE 5
         R_amplitudes = x_filtered[r_peaks]
         hist, _ = np.histogram(R_amplitudes, bins=NUM_BINS_HISTO)
@@ -242,9 +250,68 @@ def select_features_combo(X, BEAT_LEN=50, SAMPLE_RADIUS=100):
         # All features
         X_new.append(new_feature)
 
+        # FEATURE 6
+        lower_idx1 = 0
+        lower_idx2 = 0
+        lower_idx3 = 0
+        lower_idx4 = 0
+        for j in range(1, len(signal_space)):
+            if len(np.where(r_peaks < signal_space[j])[0]) > 0:
+                upped_idx1 = max(np.where(r_peaks < signal_space[j])[0])
+                if len(rr_diff[lower_idx1:upped_idx1 + 1]) > 0:
+                    new_feature.append(np.mean(rr_diff[lower_idx1:upped_idx1 + 1]))
+                    new_feature.append(np.var(rr_diff[lower_idx1:upped_idx1 + 1]))
+                else:
+                    new_feature.append(-1)
+                    new_feature.append(-1)
+                lower_idx1 = upped_idx1 + 1
+            else:
+                new_feature.append(-1)
+                new_feature.append(-1)
+
+            if len(np.where(r_peaks_christov < signal_space[j])[0]) > 0:
+                upped_idx2 = max(np.where(r_peaks_christov < signal_space[j])[0])
+                if len(rr_diff_christov[lower_idx2:upped_idx2 + 1]) > 0:
+                    new_feature.append(np.mean(rr_diff_christov[lower_idx2:upped_idx2 + 1]))
+                    new_feature.append(np.var(rr_diff_christov[lower_idx2:upped_idx2 + 1]))
+                else:
+                    new_feature.append(-1)
+                    new_feature.append(-1)
+                lower_idx2 = upped_idx2 + 1
+            else:
+                new_feature.append(-1)
+                new_feature.append(-1)
+
+            if len(np.where(r_peaks_engzee < signal_space[j])[0]) > 0:
+                upped_idx3 = max(np.where(r_peaks_engzee < signal_space[j])[0])
+                if len(rr_diff_engzee[lower_idx3:upped_idx3 + 1]) > 0:
+                    new_feature.append(np.mean(rr_diff_engzee[lower_idx3:upped_idx3 + 1]))
+                    new_feature.append(np.var(rr_diff_engzee[lower_idx3:upped_idx3 + 1]))
+                else:
+                    new_feature.append(-1)
+                    new_feature.append(-1)
+                lower_idx3 = upped_idx3 + 1
+            else:
+                new_feature.append(-1)
+                new_feature.append(-1)
+
+            if len(np.where(r_peaks_hamilton < signal_space[j])[0]) > 0:
+                upped_idx4 = max(np.where(r_peaks_hamilton < signal_space[j])[0])
+                if len(rr_diff_hamilton[lower_idx4:upped_idx4 + 1]) > 0:
+                    new_feature.append(np.mean(rr_diff_hamilton[lower_idx4:upped_idx4 + 1]))
+                    new_feature.append(np.var(rr_diff_hamilton[lower_idx4:upped_idx4 + 1]))
+                else:
+                    new_feature.append(-1)
+                    new_feature.append(-1)
+                lower_idx4 = upped_idx4 + 1
+            else:
+                new_feature.append(-1)
+                new_feature.append(-1)
+
     X_new = np.array(X_new)
     print(X_new.shape)
     return X_new
+
 
 '''
 TRAINING
@@ -271,10 +338,10 @@ X_test_ids = X_test[:, 0]
 X_test = X_test[:, 1:]
 
 print('Heart beats TRAIN...\n')
-# X_train[np.isnan(X_train)] = 0
-# X_train = select_features_combo(X_train)
-# np.save('X_train_combo', X_train)
-X_train = np.load('X_train_combo.npy')
+X_train[np.isnan(X_train)] = 0
+X_train = select_features_combo(X_train)
+np.save('X_train_combo', X_train)
+# X_train = np.load('X_train_combo.npy')
 
 print('Cross-validating...\n')
 # clf = SVC(kernel='rbf', class_weight='balanced')
