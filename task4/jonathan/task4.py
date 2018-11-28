@@ -69,7 +69,7 @@ model = keras.Sequential([
 		keras.layers.Conv3D(32, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 2x50x50
 		keras.layers.Conv3D(64, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 1x25x25
 		keras.layers.Flatten(),
-		keras.layers.Dense(128, activation=tf.nn.relu),
+		keras.layers.Dense(128, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l1(0.0001)),
 		keras.layers.Dropout(0.25),
 		keras.layers.Dense(64, activation=tf.nn.relu),
 		keras.layers.Dense(2, activation=tf.nn.softmax)	
