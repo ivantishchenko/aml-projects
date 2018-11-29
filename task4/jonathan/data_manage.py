@@ -16,3 +16,27 @@ def sliding_training_data(videos, y, blocksize=4):
 			blocks.append(block)
 			labels.append(y[i])
 	return np.asarray(blocks), np.asarray(labels)
+
+# Only on the horizontal axis
+def flip(videos, labels, horizontal=True, frames=False):
+	vids = videos
+	labs = labels
+	if horizontal:
+		hflipped = videos
+		for i in range(videos.shape[0]):
+			hflipped[i] = np.flip(hflipped[i], axis=2)
+		vids = np.concatenate((vids, hflipped), axis=0)
+		labs = np.concatenate((labs, labels), axis=0)
+	if frames:
+		fflipped = videos
+		for i in range(videos.shape[0]):
+			fflipped[i] = np.flip(fflipped[i], axis=0)
+		vids = np.concatenate((vids, fflipped), axis=0)
+		labs = np.concatenate((labs, labels), axis=0)
+	return vids, labs
+
+def normalize_data(X):
+	X_normed = X
+	for i in range(X.shape[0]):
+		X_normed[i] = (X[i] - 127.5) / 255.0
+	return X_normed

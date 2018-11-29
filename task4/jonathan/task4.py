@@ -6,8 +6,9 @@ import numpy as np
 from tf_utils import input_fn_from_dataset,input_fn_frame_from_dataset,save_tf_record,prob_positive_class_from_prediction
 from get_data import get_videos_from_folder,get_target_from_csv
 from utils import save_solution
-from data_manage import sliding_training_data
+from data_manage import sliding_training_data, flip, normalize_data
 from sklearn.metrics import roc_auc_score
+import matplotlib.pyplot as plt
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 train_folder = os.path.join(dir_path,"../train/")
@@ -36,7 +37,6 @@ print(x_test.shape)
 
 # Could also just run detection on each individual frame and average
 # probabilities... however, then motion data would be missing...
-
 # But, could also do a sliding window approach...
 # i.e. run 3D convolution on (e.g.) 6 previous frames and then
 # 2D convolution afterwards...
@@ -45,6 +45,11 @@ print(x_test.shape)
 # Could take inspiration from ResNet or VGG and just replace
 # first few convolutions with 3D
 
+# Make into -1 to 1 range
+x_train = normalize_data(x_train)
+x_test = normalize_data(x_test)
+
+# Split into training and testing data
 num_training = math.floor(x_train.shape[0] * 0.8)
 indices = np.random.permutation(x_train.shape[0])
 training_idx, validation_idx = indices[:num_training], indices[num_training:]
@@ -52,6 +57,9 @@ training_x = x_train[training_idx]
 validation_x = x_train[validation_idx]
 training_y = y_train[training_idx]
 validation_y = y_train[validation_idx]
+
+# Training data augmentation
+training_x, training_y = flip(training_x, training_y, horizontal=False, frames=True)
 
 blocksize = 4
 blocks, labels = sliding_training_data(training_x, training_y, blocksize=blocksize)
@@ -61,7 +69,8 @@ model = keras.Sequential([
 		keras.layers.Conv3D(32, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 2x50x50
 		keras.layers.Conv3D(64, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 1x25x25
 		keras.layers.Flatten(),
-		keras.layers.Dense(128, activation=tf.nn.relu),
+		keras.layers.Dense(128, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l1(0.0001)),
+		keras.layers.Dropout(0.25),
 		keras.layers.Dense(64, activation=tf.nn.relu),
 		keras.layers.Dense(2, activation=tf.nn.softmax)	
 	])
