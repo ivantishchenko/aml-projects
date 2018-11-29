@@ -9,6 +9,7 @@ from utils import save_solution
 from data_manage import sliding_training_data, flip, normalize_data
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 train_folder = os.path.join(dir_path,"../train/")
@@ -45,39 +46,6 @@ print(x_test.shape)
 # Could take inspiration from ResNet or VGG and just replace
 # first few convolutions with 3D
 
-# Make into -1 to 1 range
-x_train = normalize_data(x_train)
-x_test = normalize_data(x_test)
-
-# Split into training and testing data
-num_training = math.floor(x_train.shape[0] * 0.8)
-indices = np.random.permutation(x_train.shape[0])
-training_idx, validation_idx = indices[:num_training], indices[num_training:]
-training_x = x_train[training_idx]
-validation_x = x_train[validation_idx]
-training_y = y_train[training_idx]
-validation_y = y_train[validation_idx]
-
-# Training data augmentation
-training_x, training_y = flip(training_x, training_y, horizontal=False, frames=True)
-
-blocksize = 4
-blocks, labels = sliding_training_data(training_x, training_y, blocksize=blocksize)
-
-model = keras.Sequential([
-		keras.layers.InputLayer(input_shape=(1, blocksize, 100, 100)),
-		keras.layers.Conv3D(32, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 2x50x50
-		keras.layers.Conv3D(64, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 1x25x25
-		keras.layers.Flatten(),
-		keras.layers.Dense(128, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l1(0.0001)),
-		keras.layers.Dropout(0.25),
-		keras.layers.Dense(64, activation=tf.nn.relu),
-		keras.layers.Dense(2, activation=tf.nn.softmax)	
-	])
-
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
-model.fit(blocks, labels, epochs=10)
-
 def predict_videos(X, model, blocksize=4):
 	predictions = []
 	for i in range(X.shape[0]):
@@ -96,15 +64,63 @@ def predict_videos(X, model, blocksize=4):
 	predictions = np.asarray(predictions)
 	return predictions
 
-# Validation
-vpred = predict_videos(validation_x, model, blocksize=blocksize)
-probs_pos = [prob[1] for prob in vpred]
-probs_pos = np.asarray(probs_pos)
-roc_auc = roc_auc_score(validation_y, probs_pos)
-print(roc_auc)
+# Make into -1 to 1 range
+x_train = normalize_data(x_train)
+x_test = normalize_data(x_test)
 
-# Prediction
-predictions = predict_videos(x_test, model, blocksize=blocksize)
-solution = [prob[1] for prob in predictions]
+# Split into training and testing data
+num_training = math.floor(x_train.shape[0] * 0.9)
+indices = np.random.permutation(x_train.shape[0])
+training_idx, validation_idx = indices[:num_training], indices[num_training:]
+training_x = x_train[training_idx]
+validation_x = x_train[validation_idx]
+training_y = y_train[training_idx]
+validation_y = y_train[validation_idx]
+
+# Training data augmentation
+training_x, training_y = flip(training_x, training_y, horizontal=False, frames=True)
+
+splits = 10
+kf = KFold(n_splits=splits)
+blocksize = 4
+blocks, labels = sliding_training_data(training_x, training_y, blocksize=blocksize)
+models = []
+
+for train_index, valid_index in kf.split(blocks, labels):
+	train_blocks = blocks[train_index, :, :, :]
+	train_labels = labels[train_index]
+
+	model = keras.Sequential([
+			keras.layers.InputLayer(input_shape=(1, blocksize, 100, 100)),
+			keras.layers.Conv3D(32, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 2x50x50
+			keras.layers.Conv3D(64, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 1x25x25
+			keras.layers.Flatten(),
+			keras.layers.Dense(128, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l1(0.0001)),
+			keras.layers.Dropout(0.25),
+			keras.layers.Dense(64, activation=tf.nn.relu),
+			keras.layers.Dense(2, activation=tf.nn.softmax)	
+		])
+
+	model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
+	model.fit(train_blocks, train_labels, epochs=10)
+	models.append(model)
+
+solutions = []
+
+# Validation
+for i in range(splits):
+	vpred = predict_videos(validation_x, models[i], blocksize=blocksize)
+	probs_pos = [prob[1] for prob in vpred]
+	probs_pos = np.asarray(probs_pos)
+	roc_auc = roc_auc_score(validation_y, probs_pos)
+	print(roc_auc)
+
+	# Prediction
+	predictions = predict_videos(x_test, models[i], blocksize=blocksize)
+	solution = [prob[1] for prob in predictions]
+	solutions.append(solution)
+	
+solutions = np.asarray(solutions)
+solution = list(solutions.mean(axis=0))
 save_solution(my_solution_file, solution)
 
