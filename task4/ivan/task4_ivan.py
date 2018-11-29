@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from keras.layers import Conv2D
 from keras.layers import MaxPooling2D
 from keras.layers import Flatten
+from sklearn.metrics import roc_auc_score
 
 MAX_SEQ_LEN = 210
 VIDEO_DIM = 100
@@ -50,33 +51,70 @@ x_test = np.load('../X_test.npy')
 #
 # avg_seq_len /= x_test.shape[0]
 
-X_train = pad_sequences(x_train, maxlen=MAX_SEQ_LEN, padding='post')
-X_test = pad_sequences(x_test, maxlen=MAX_SEQ_LEN, padding='post')
+# X_train = pad_sequences(x_train, maxlen=MAX_SEQ_LEN, padding='post')
+# X_test = pad_sequences(x_test, maxlen=MAX_SEQ_LEN, padding='post')
 
-X_train = np.expand_dims(X_train, axis=2)
-X_test = np.expand_dims(X_test, axis=2)
+num_training = math.floor(x_train.shape[0] * 0.8)
+np.random.seed(42)
+indices = np.random.permutation(x_train.shape[0])
+training_idx, validation_idx = indices[:num_training], indices[num_training:]
 
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+X_train = x_train[training_idx]
+X_val = x_train[validation_idx]
+Y_train = y_train[training_idx]
+Y_val = y_train[validation_idx]
 
 # CNN PART
-video = Input(shape=(MAX_SEQ_LEN, CHANNEL_NUM, VIDEO_DIM, VIDEO_DIM))
+video = Input(shape=(None, CHANNEL_NUM, VIDEO_DIM, VIDEO_DIM))
 frame = Input(shape=(CHANNEL_NUM, VIDEO_DIM, VIDEO_DIM))
 
-x = Conv2D(32, (5, 5), activation='relu', data_format='channels_first')(frame)
-# x = MaxPooling2D((2, 2), data_format='channels_first')(x)
+x = Conv2D(32, (5, 5), activation='relu', padding="same", data_format='channels_first')(frame)
+x = MaxPooling2D((2, 2), data_format='channels_first')(x)
 
-# x = Conv2D(64, (3, 3), activation='relu', data_format='channels_first')(x)
-# x = MaxPooling2D((2, 2), data_format='channels_first')(x)
+x = Conv2D(64, (5, 5), activation='relu', padding="same", data_format='channels_first')(x)
+x = MaxPooling2D((2, 2), data_format='channels_first')(x)
 cnn_out = GlobalAveragePooling2D(data_format='channels_first')(x)
 
 cnn = Model([frame], [cnn_out])
 
 # LSTM PART
 encoded_frames = TimeDistributed(cnn)(video)
-encoded_sequence = LSTM(64)(encoded_frames)
-hidden_layer = Dense(units=102, activation="relu")(encoded_sequence)
+encoded_sequence = LSTM(256)(encoded_frames)
+hidden_layer = Dense(units=1024, activation="relu")(encoded_sequence)
 outputs = Dense(units=2, activation="softmax")(hidden_layer)
 
 model = Model([video], [outputs])
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
-model.fit(X_train, y_train, epochs=10, batch_size=4)
+
+print("Training")
+# Training
+for i in range(10):
+    print('Epoch------------------------------------ ', i + 1)
+    epoch_avg = 0
+    for j in range(len(X_train)):
+        seq = np.array([np.expand_dims(X_train[j], axis=1)])
+        label = np.array([Y_train[j]])
+        loss = model.train_on_batch(seq, label)
+        print("Video {}. Loss = {}".format(j + 1, loss))
+        epoch_avg += loss
+
+    epoch_avg /= len(X_train)
+    print('Avg Loss = ', epoch_avg)
+
+# Prediction
+print("Validation")
+predictions_val = []
+for j in range(len(X_val)):
+    seq = np.array([np.expand_dims(X_val[j], axis=1)])
+    prediction = model.predict_on_batch(seq)[0]
+
+    if prediction[0] >= prediction[1]:
+        predictions_val.append(0)
+    else:
+        predictions_val.append(1)
+
+print(predictions_val)
+
+predictions_val = np.asarray(predictions_val)
+roc_auc = roc_auc_score(Y_val, predictions_val)
+print("Roc Auc = {}".format(roc_auc))
