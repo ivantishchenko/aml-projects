@@ -4,3 +4,8 @@ task2/*.csv
 task2/*.npy
 task3/*.csv
 task3/*.npy
+
+task4/test
+task4/train
+task4/*.csv
+task4/*.npy
