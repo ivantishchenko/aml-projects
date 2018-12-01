@@ -10,6 +10,7 @@ from data_manage import sliding_training_data, flip, normalize_data, extend_vide
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
+from tensorflow.keras.applications.vgg16 import VGG16
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 train_folder = os.path.join(dir_path,"../train/")
@@ -29,9 +30,8 @@ x_test = normalize_data(x_test)
 # Extend videos so that they are all the same length (216, 100, 100)
 x_train = extend_videos(x_train)
 x_test = extend_videos(x_test)
-x_train = x_train.reshape((x_train.shape[0], 1, x_train[0].shape[0], x_train[0].shape[1], x_train[0].shape[2]))
-x_test = x_test.reshape((x_test.shape[0], 1, x_test[0].shape[0], x_test[0].shape[1], x_test[0].shape[2]))
-
+x_train = x_train.reshape((x_train.shape[0], x_train[0].shape[0], x_train[0].shape[1], x_train[0].shape[2], 1))
+x_test = x_test.reshape((x_test.shape[0], x_test[0].shape[0], x_test[0].shape[1], x_test[0].shape[2], 1))
 print(x_train.shape)
 
 # Split into training and validation
@@ -43,19 +43,20 @@ validation_x = x_train[validation_idx]
 training_y = y_train[training_idx]
 validation_y = y_train[validation_idx]
 
-model = keras.Sequential([
-			keras.layers.InputLayer(input_shape=(1, 216, 100, 100)),
-			keras.layers.Conv3D(64, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 108x50x50
-			keras.layers.Conv3D(128, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 54x25x25
-			keras.layers.Flatten(),
-			keras.layers.Dense(1028, activation=tf.nn.relu),
-			keras.layers.Dropout(0.25),
-			keras.layers.Dense(256, activation=tf.nn.relu),
-			keras.layers.Dense(2, activation=tf.nn.softmax)	
-		])
+cnn = keras.Sequential()
+cnn.add(keras.layers.InputLayer(input_shape=(100, 100, 1)))
+cnn.add(keras.layers.Conv2D(32, 3, strides=(2,2), activation=tf.nn.relu, padding='same'))
+cnn.add(keras.layers.Conv2D(64, 3, strides=(2,2), activation=tf.nn.relu, padding='same'))
+cnn.add(keras.layers.Flatten())
+
+model = keras.Sequential()
+model.add(keras.layers.TimeDistributed(cnn, input_shape=(216, 100, 100, 1)))
+model.add(keras.layers.LSTM(128))
+model.add(keras.layers.Dense(2, activation=tf.nn.softmax))
 
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
 model.fit(training_x, training_y, epochs=10)
+
 
 # Validate
 pred = model.predict(validation_x)
