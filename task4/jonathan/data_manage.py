@@ -53,3 +53,14 @@ def extend_videos(X, extension=216):
 		X_extended.append(ext)
 	X_extended = np.asanyarray(X_extended)
 	return X_extended
+
+def get_frames(X, y):
+	frames = []
+	labels = []
+	for i in range(X.shape[0]):
+		for j in range(X[i].shape[0]):
+			frame = X[i][j, :, :]
+			frame = frame.reshape((100, 100, 1))
+			frames.append(frame)
+			labels.append(y[i])
+	return np.asarray(frames), np.asarray(labels)
