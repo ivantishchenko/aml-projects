@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 # Extract blocks of training data from videos [4, 100, 100] non-overlapping
 # and return list of these and a list of all labels 
@@ -40,3 +41,15 @@ def normalize_data(X):
 	for i in range(X.shape[0]):
 		X_normed[i] = (X[i] - 127.5) / 255.0
 	return X_normed
+
+def extend_videos(X, extension=216):
+	X_extended = []
+
+	for i in range(X.shape[0]):
+		tiles = (extension - X[i].shape[0]) / X[i].shape[0]
+		tiles = math.ceil(tiles) + 1
+		ext = np.tile(X[i], (tiles, 1, 1))
+		ext = ext[0:extension, :, :]
+		X_extended.append(ext)
+	X_extended = np.asanyarray(X_extended)
+	return X_extended
