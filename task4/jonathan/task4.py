@@ -92,12 +92,14 @@ for train_index, valid_index in kf.split(blocks, labels):
 
 	model = keras.Sequential([
 			keras.layers.InputLayer(input_shape=(1, blocksize, 100, 100)),
-			keras.layers.Conv3D(32, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 2x50x50
-			keras.layers.Conv3D(64, 3, strides=(2,2,2), activation=tf.nn.relu, padding='same'), # 1x25x25
+			keras.layers.Conv3D(32, 3, activation=tf.nn.leaky_relu, padding='same'),
+			keras.layers.Conv3D(32, 3, strides=(2,2,2), activation=tf.nn.leaky_relu, padding='same'),
+			keras.layers.Conv3D(64, 3, activation=tf.nn.leaky_relu, padding='same'),
+			keras.layers.Conv3D(64, 3, strides=(2,2,2), activation=tf.nn.leaky_relu, padding='same'),
 			keras.layers.Flatten(),
-			keras.layers.Dense(128, activation=tf.nn.relu, kernel_regularizer=keras.regularizers.l1(0.0001)),
+			keras.layers.Dense(256, activation=tf.nn.leaky_relu),
 			keras.layers.Dropout(0.25),
-			keras.layers.Dense(64, activation=tf.nn.relu),
+			keras.layers.Dense(128, activation=tf.nn.leaky_relu),
 			keras.layers.Dense(2, activation=tf.nn.softmax)	
 		])
 
