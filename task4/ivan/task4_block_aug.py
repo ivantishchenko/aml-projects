@@ -5,21 +5,24 @@ from tensorflow import keras
 import numpy as np
 from tf_utils import input_fn_from_dataset, input_fn_frame_from_dataset, save_tf_record, \
     prob_positive_class_from_prediction
-from get_data import get_videos_from_folder, get_target_from_csv
 from utils import save_solution
 from data_manage import sliding_training_data, flip, normalize_data
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 from data_manage import sliding_training_data, flip, normalize_data, rotate, shift, zoom, shear
+from utils import get_videos_from_folder,get_target_from_csv
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-my_solution_file = os.path.join(dir_path, '../solution.csv')
+train_folder = os.path.join(dir_path,"../train/")
+test_folder = os.path.join(dir_path,"../test/")
 
-x_train = np.load('../X_train.npy')
-y_train = np.load('../Y_train.npy')
-x_test = np.load('../X_test.npy')
+train_target = os.path.join(dir_path,'../train_target.csv')
+my_solution_file = os.path.join(dir_path,'../solution.csv')
 
+x_train = get_videos_from_folder(train_folder)
+y_train = get_target_from_csv(train_target)
+x_test = get_videos_from_folder(test_folder)
 
 # So... can either create a RNN and run over frames
 # or somehow extend videos so they are all [212, 100, 100]
@@ -81,14 +84,17 @@ training_x = normalize_data(training_x)
 validation_x = normalize_data(validation_x)
 x_test = normalize_data(x_test)
 
-
 splits = 10
 kf = KFold(n_splits=splits)
 blocksize = 4
 blocks, labels = sliding_training_data(training_x, training_y, blocksize=blocksize)
 models = []
 
+num_model = 0
 for train_index, valid_index in kf.split(blocks, labels):
+    print("------------------")
+    print("Fitting model = {}".format(num_model))
+    print("------------------")
     train_blocks = blocks[train_index, :, :, :]
     train_labels = labels[train_index]
 
@@ -109,20 +115,29 @@ for train_index, valid_index in kf.split(blocks, labels):
     model.fit(train_blocks, train_labels, epochs=10)
     models.append(model)
 
+    num_model += 1
+
 solutions = []
 
+scores_roc_auc = []
 # Validation
 for i in range(splits):
     vpred = predict_videos(validation_x, models[i], blocksize=blocksize)
     probs_pos = [prob[1] for prob in vpred]
     probs_pos = np.asarray(probs_pos)
     roc_auc = roc_auc_score(validation_y, probs_pos)
-    print(roc_auc)
+    scores_roc_auc.append(roc_auc)
 
     # Prediction
     predictions = predict_videos(x_test, models[i], blocksize=blocksize)
     solution = [prob[1] for prob in predictions]
     solutions.append(solution)
+
+print("Scores")
+print(scores_roc_auc)
+print("Mean = {}".format(np.mean(np.array(scores_roc_auc))))
+print("Std = {}".format(np.std(np.array(scores_roc_auc))))
+
 
 solutions = np.asarray(solutions)
 solution = list(solutions.mean(axis=0))

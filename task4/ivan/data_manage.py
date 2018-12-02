@@ -29,12 +29,12 @@ def shear(videos, labels):
     labs = labels
     hshear = videos
     for i in range(videos.shape[0]):
-        # PLOT VID
-        demo = hshear[i][5]
-        plt.imshow(demo, cmap='gray')
-        plt.show()
-        # print(hshear[i])
-        # PLOT VID
+        # # PLOT VID
+        # demo = hshear[i][5]
+        # plt.imshow(demo, cmap='gray')
+        # plt.show()
+        # # print(hshear[i])
+        # # PLOT VID
 
         shear_len = np.random.uniform(-0.12, 0.12, 1)[0]
 
@@ -44,12 +44,12 @@ def shear(videos, labels):
                                  [0, 0, 0, 1]])
         hshear[i] = scipy.ndimage.affine_transform(hshear[i], shear_matrix)
 
-        # PLOT VID
-        # print(hshear[i])
-        demo = hshear[i][5]
-        plt.imshow(demo, cmap='gray')
-        plt.show()
-        # PLOT VID
+        # # PLOT VID
+        # # print(hshear[i])
+        # demo = hshear[i][5]
+        # plt.imshow(demo, cmap='gray')
+        # plt.show()
+        # # PLOT VID
 
     vids = np.concatenate((vids, hshear), axis=0)
     labs = np.concatenate((labs, labels), axis=0)
