@@ -1,10 +1,9 @@
-1) add more augmentations to task4
-2) for each data split train 3x networks task4
-3) Do ensemble for LSTM
-5) Train for more than 10 epochs
-6) Train with early stopping
+- for each data split train 3x networks task4
+- Do ensemble for LSTM
+- Train for more than 10 epochs
+- Train with early stopping
 Paper
-7) Add batch normalization
-+8) Try majority vote instead of averaging
-9) try data augmentation from the paper
-10) Do resnet50
++ Add batch normalization
++ Try majority vote instead of averaging
+- try data augmentation from the paper
+- Do resnet50

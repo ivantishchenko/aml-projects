@@ -6,7 +6,7 @@ import numpy as np
 from tf_utils import input_fn_from_dataset, input_fn_frame_from_dataset, save_tf_record, \
     prob_positive_class_from_prediction
 from utils import save_solution
-from data_manage import sliding_training_data, flip, normalize_data
+from data_manage import sliding_training_data, flip, normalize_data, rotate
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
@@ -68,6 +68,7 @@ training_y = y_train[training_idx]
 validation_y = y_train[validation_idx]
 
 # Training data augmentation
+training_x, training_y = rotate(training_x, training_y)
 training_x, training_y = flip(training_x, training_y, horizontal=False, frames=True)
 
 splits = 10
@@ -82,14 +83,23 @@ for train_index, valid_index in kf.split(blocks, labels):
 
     model = keras.Sequential([
         keras.layers.InputLayer(input_shape=(1, blocksize, 100, 100)),
-        keras.layers.Conv3D(32, 3, activation=tf.nn.leaky_relu, padding='same'),
-        keras.layers.Conv3D(32, 3, strides=(2, 2, 2), activation=tf.nn.leaky_relu, padding='same'),
-        keras.layers.Conv3D(64, 3, activation=tf.nn.leaky_relu, padding='same'),
-        keras.layers.Conv3D(64, 3, strides=(2, 2, 2), activation=tf.nn.leaky_relu, padding='same'),
+        keras.layers.Conv3D(32, 3, padding='same'),
+        keras.layers.BatchNormalization(axis=1),
+        keras.layers.LeakyReLU(),
+        keras.layers.Conv3D(32, 3, strides=(2, 2, 2), padding='same'),
+        keras.layers.BatchNormalization(axis=1),
+        keras.layers.LeakyReLU(),
+        keras.layers.Conv3D(64, 3, padding='same'),
+        keras.layers.BatchNormalization(axis=1),
+        keras.layers.LeakyReLU(),
+        keras.layers.Conv3D(64, 3, strides=(2, 2, 2), padding='same'),
+        keras.layers.BatchNormalization(axis=1),
+        keras.layers.LeakyReLU(),
         keras.layers.Flatten(),
         keras.layers.Dense(256, activation=tf.nn.leaky_relu),
         keras.layers.Dropout(0.25),
         keras.layers.Dense(128, activation=tf.nn.leaky_relu),
+        keras.layers.Dropout(0.25),
         keras.layers.Dense(2, activation=tf.nn.softmax)
     ])
 
