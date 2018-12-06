@@ -10,6 +10,7 @@ from data_manage import sliding_training_data, flip, normalize_data, extend_vide
 from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
+from keras.preprocessing.image import ImageDataGenerator
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 my_solution_file = os.path.join(dir_path, '../solution.csv')
@@ -43,10 +44,14 @@ def predict_videos(X, model):
     return predictions
 
 
-# Training data augmentation
-training_x, training_y = flip(training_x, training_y, horizontal=False, frames=True)
+datagen = ImageDataGenerator(
+    rotation_range=10,
+    width_shift_range=10,
+    height_shift_range=10,
+    shear_range=0.03,
+    zoom_range=0.08)
 
-splits = 10
+splits = 5
 kf = KFold(n_splits=splits)
 frames, labels = get_frames(training_x, training_y)
 print(frames.shape)
@@ -61,46 +66,25 @@ for train_index, valid_index in kf.split(frames, labels):
 
     cnn = keras.Sequential()
     cnn.add(keras.layers.InputLayer(input_shape=(100, 100, 1)))
-
-    cnn.add(keras.layers.Conv2D(32, 3, padding='same'))
-    cnn.add(keras.layers.BatchNormalization())
-    cnn.add(keras.layers.Activation('relu'))
-
-    cnn.add(keras.layers.Conv2D(32, 3, padding='same'))
-    cnn.add(keras.layers.BatchNormalization())
-    cnn.add(keras.layers.Activation('relu'))
-
-    cnn.add(keras.layers.MaxPooling2D(2))  # 50x50
-
-    cnn.add(keras.layers.Conv2D(64, 3, padding='same'))
-    cnn.add(keras.layers.BatchNormalization())
-    cnn.add(keras.layers.Activation('relu'))
-
-    cnn.add(keras.layers.Conv2D(64, 3, padding='same'))
-    cnn.add(keras.layers.BatchNormalization())
-    cnn.add(keras.layers.Activation('relu'))
-
-    cnn.add(keras.layers.MaxPooling2D(2))  # 25x25
-
-    cnn.add(keras.layers.Conv2D(128, 3, padding='same'))
-    cnn.add(keras.layers.BatchNormalization())
-    cnn.add(keras.layers.Activation('relu'))
-
-    cnn.add(keras.layers.Conv2D(128, 3, padding='same'))
-    cnn.add(keras.layers.BatchNormalization())
-    cnn.add(keras.layers.Activation('relu'))
-
-    cnn.add(keras.layers.MaxPooling2D(2))  # 12x12
-
+    cnn.add(keras.layers.Conv2D(32, 3, activation=tf.nn.relu, padding='same'))
+    cnn.add(keras.layers.Conv2D(32, 3, activation=tf.nn.relu, padding='same'))
+    cnn.add(keras.layers.MaxPooling2D()) # 50x50
+    cnn.add(keras.layers.Conv2D(64, 3, activation=tf.nn.relu, padding='same'))
+    cnn.add(keras.layers.Conv2D(64, 3, activation=tf.nn.relu, padding='same'))
+    cnn.add(keras.layers.MaxPooling2D()) # 25x25
+    cnn.add(keras.layers.Conv2D(128, 3, activation=tf.nn.relu, padding='same'))
+    cnn.add(keras.layers.Conv2D(128, 3, activation=tf.nn.relu, padding='same'))
+    cnn.add(keras.layers.MaxPooling2D()) # 12x12
     cnn.add(keras.layers.Flatten())
     cnn.add(keras.layers.Dense(1028, activation=tf.nn.relu))
     cnn.add(keras.layers.Dropout(0.25))
     cnn.add(keras.layers.Dense(512, activation=tf.nn.relu))
-    cnn.add(keras.layers.Dropout(0.25))
     cnn.add(keras.layers.Dense(2, activation=tf.nn.softmax))
 
     cnn.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
-    cnn.fit(train_frames, train_labels, epochs=10)
+
+    cnn.fit_generator(datagen.flow(train_frames, train_labels, batch_size=32), steps_per_epoch=(train_frames.shape[0]) / 32, epochs=5)
+    # cnn.fit(train_frames, train_labels, epochs=10)
     models.append(cnn)
 
 solutions = []

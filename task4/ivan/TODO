@@ -5,5 +5,5 @@
 Paper
 + Add batch normalization
 + Try majority vote instead of averaging
-- try data augmentation from the paper
-- Do resnet50
++ try data augmentation from the paper
++ Do resnet50
