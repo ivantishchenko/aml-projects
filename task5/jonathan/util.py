@@ -85,3 +85,13 @@ def get_band_features(eeg):
         feature_list.append(np.asarray(features))
     return np.asarray(feature_list)
 
+def get_emg_features(emg):
+    feature_list = []
+    print("Computing EMG features...")
+    for i in range(emg.shape[0]):
+        features = []
+        features.append(emg[i].std())
+        features.append(np.absolute(emg[i]).mean())
+        feature_list.append(np.asarray(features))
+    return np.asarray(feature_list)
+
