@@ -1,5 +1,7 @@
 import biosppy
 import numpy as np
+import scipy
+import mne
 
 def create_eeg(eeg):
     signals = []
@@ -34,3 +36,23 @@ def get_eeg_features(signals):
         feature_list.append(features)
 
     return np.asarray(feature_list)
+
+def get_band_features(eeg):
+    feature_list = []
+    bands = [[0.5, 4], [4, 8], [8, 12], [12, 16], [16, 32]]
+    for i in range(eeg.shape[0]):
+        print("Computing features for : " + str(i))
+        features = []
+        signal = eeg[i]
+        psd, freqs = mne.time_frequency.psd_array_multitaper(signal, 128., adaptive=True, normalization='full')
+        for j in range(len(bands)):
+            low = bands[j][0]
+            high = bands[j][1]
+            idx = np.logical_and(freqs >= low, freqs < high)
+            bp = np.sum(psd[idx])
+            rbp = bp / np.sum(psd)
+            features.append(bp)
+            features.append(rbp)
+        feature_list.append(np.asarray(features))
+    return np.asarray(feature_list)
+
