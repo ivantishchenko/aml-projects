@@ -20,15 +20,24 @@ test_eeg2, test_eeg2_id = DataReader.read_data("../test_eeg2.csv")
 test_emg, test_emg_id = DataReader.read_data("../test_emg.csv")
 train_labels, train_id = DataReader.read_data("../train_labels.csv")
 
-X_train = util.get_band_features(train_eeg1)
-y_train = train_labels.flatten()
-X_test = util.get_band_features(test_eeg1)
+save = False
 
+if save:
+    X_train = util.get_band_features(train_eeg1)
+    X_test = util.get_band_features(test_eeg1)
+
+    np.save("X_train.npy", X_train)
+    np.save("X_test.npy", X_test)
+else:
+    X_train = np.load("X_train.npy")
+    X_test = np.load("X_test.npy")
+
+y_train = train_labels.flatten()    
 X_train, mean_X, std_X = DataReader.normalize_data(X_train)
 X_test, _, _ = DataReader.normalize_data(X_test, mean_X, std_X)
 
-kf = KFold(n_splits=3)
-clf = RandomForestClassifier(n_estimators=1000, class_weight="balanced")
+kf = KFold(n_splits=10)
+clf = SVC(gamma='auto', class_weight='balanced')
 i = 0
 
 for train_index, validation_index in kf.split(X_train, y_train):
