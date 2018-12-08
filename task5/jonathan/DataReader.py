@@ -11,6 +11,11 @@ def replace_nans(X, value):
     X[inds] = value
     return X
 
+def replace_infs(X, value):
+    inds = np.where(np.isinf(X))
+    X[inds] = value
+    return X
+
 def normalize_data(X, mean=None, std=None):
     if mean is None:
         mean = X.mean(axis=0)

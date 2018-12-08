@@ -8,6 +8,8 @@ from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectKBest, SelectFdr
+from sklearn.neighbors import KNeighborsClassifier
 import biosppy
 import util
 import DataReader
@@ -21,33 +23,37 @@ test_emg, test_emg_id = DataReader.read_data("../test_emg.csv")
 train_labels, train_id = DataReader.read_data("../train_labels.csv")
 
 save = False
-
 if save:
-    X_train_eeg1 = util.get_band_features(train_eeg1)
-    X_train_eeg2 = util.get_band_features(train_eeg2)
+    X_train_eeg1 = util.get_wavelet_coeffs(train_eeg1)
+    X_train_eeg1 = util.get_wavelet_features(X_train_eeg1)
+    X_train_eeg2 = util.get_wavelet_coeffs(train_eeg2)
+    X_train_eeg2 = util.get_wavelet_features(X_train_eeg2)
     X_train_emg = util.get_emg_features(train_emg)
     X_train = np.concatenate((X_train_eeg1, X_train_eeg2, X_train_emg), axis=1)
 
-    X_test_eeg1 = util.get_band_features(test_eeg1)
-    X_test_eeg2 = util.get_band_features(test_eeg2)
+    X_test_eeg1 = util.get_wavelet_coeffs(test_eeg1)
+    X_test_eeg1 = util.get_wavelet_features(X_test_eeg1)
+    X_test_eeg2 = util.get_wavelet_coeffs(test_eeg2)
+    X_test_eeg2 = util.get_wavelet_features(X_test_eeg2)
     X_test_emg = util.get_emg_features(test_emg)
     X_test = np.concatenate((X_test_eeg1, X_test_eeg2, X_test_emg), axis=1)
 
-    np.save("X_train.npy", X_train)
-    np.save("X_test.npy", X_test)
+    np.save("X_train2.npy", X_train)
+    np.save("X_test2.npy", X_test)
 else:
-    X_train = np.load("X_train.npy")
-    X_test = np.load("X_test.npy")
+    X_train = np.load("X_train2.npy")
+    X_test = np.load("X_test2.npy")
 
-
-y_train = train_labels.flatten()  
+y_train = train_labels.flatten()
 X_train, mean_X, std_X = DataReader.normalize_data(X_train)
 X_test, _, _ = DataReader.normalize_data(X_test, mean_X, std_X)
-
+X_train = DataReader.replace_infs(DataReader.replace_nans(X_train, 0.0), 0.0)
+X_test = DataReader.replace_infs(DataReader.replace_nans(X_test, 0.0), 0.0)
 print("Data prepared... Classifying...")
 
 kf = KFold(n_splits=10)
 clf = SVC(gamma='auto', class_weight='balanced')
+#clf = KNeighborsClassifier(n_neighbors=1)
 i = 0
 
 for train_index, validation_index in kf.split(X_train, y_train):
@@ -71,5 +77,4 @@ f.write("Id,y\n")
 for i in range(test_eeg1_id.shape[0]):
     f.write(str(int(test_eeg1_id[i])) + "," + str(round(subm_y[i])) + "\n")
 f.close()
-
 

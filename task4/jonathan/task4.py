@@ -69,7 +69,7 @@ x_train = normalize_data(x_train)
 x_test = normalize_data(x_test)
 
 # Split into training and testing data
-num_training = math.floor(x_train.shape[0] * 0.9)
+num_training = math.floor(x_train.shape[0] * 1.0)
 indices = np.random.permutation(x_train.shape[0])
 training_idx, validation_idx = indices[:num_training], indices[num_training:]
 training_x = x_train[training_idx]
@@ -111,11 +111,11 @@ solutions = []
 
 # Validation
 for i in range(splits):
-	vpred = predict_videos(validation_x, models[i], blocksize=blocksize)
-	probs_pos = [prob[1] for prob in vpred]
-	probs_pos = np.asarray(probs_pos)
-	roc_auc = roc_auc_score(validation_y, probs_pos)
-	print(roc_auc)
+#	vpred = predict_videos(validation_x, models[i], blocksize=blocksize)
+#	probs_pos = [prob[1] for prob in vpred]
+#	probs_pos = np.asarray(probs_pos)
+#	roc_auc = roc_auc_score(validation_y, probs_pos)
+#	print(roc_auc)
 
 	# Prediction
 	predictions = predict_videos(x_test, models[i], blocksize=blocksize)

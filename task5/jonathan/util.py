@@ -2,6 +2,8 @@ import biosppy
 import numpy as np
 import scipy
 import mne
+import pywt
+import math
 
 def create_eeg(eeg):
     signals = []
@@ -62,11 +64,12 @@ def get_band_features(eeg):
         features = []
         signal = eeg[i]
         psd, freqs = mne.time_frequency.psd_array_multitaper(eeg[i], 128., adaptive=True, normalization='full')
-        
+
         for j in range(len(bands)):
             power = bandpower(psd, freqs, bands[j])
             stdev = bandstd(psd, freqs, bands[j])
-            squaredmean = bandsquaredmean(psd, freqs, bands[j]) 
+            squaredmean = bandsquaredmean(psd, freqs, bands[j])
+            relativepower = bandpower(np.absolute(psd), freqs, bands[j]) / np.sum(np.absolute(psd))
             features.append(power)
             features.append(stdev)
             features.append(squaredmean)
@@ -78,7 +81,7 @@ def get_band_features(eeg):
         features.append(alphapower / (deltapower + thetapower))
         features.append(deltapower / (alphapower + thetapower))
         features.append(thetapower / (deltapower + alphapower))
-
+            
         features.append(np.max(np.absolute(eeg[i])))
         features.append(np.sum(np.absolute(eeg[i])))
 
@@ -92,6 +95,36 @@ def get_emg_features(emg):
         features = []
         features.append(emg[i].std())
         features.append(np.absolute(emg[i]).mean())
+        features.append(np.max(np.absolute(emg[i])) - np.min(np.absolute(emg[i])))
+        feature_list.append(np.asarray(features))
+    return np.asarray(feature_list)
+
+def get_wavelet_coeffs(eeg):
+    coeffs = []
+    for i in range(eeg.shape[0]):
+        print("Computing wavelets for signal: " + str(i))
+        coeff = pywt.wavedec(eeg[i], 'db4', level=5)
+        coeffs.append(coeff)
+    return coeffs
+
+def get_wavelet_features(wavelets):
+    feature_list = []
+    for i in range(len(wavelets)):
+        features = []
+        powers = []
+        coeff = wavelets[i]
+        for j in range(len(coeff)):
+            c = np.asarray(coeff[j])
+            features.append(np.sum(np.absolute(c) * np.absolute(c)))
+            powers.append(features[-1])
+            entropy = 0.
+            for k in range(c.shape[0]):
+                entropy = entropy + c[k] * c[k] * math.log(c[k] * c[k])
+            features.append(entropy)
+            features.append(c.std())
+            features.append(np.absolute(c).mean())
+            features.append(np.max(c))
+            
         feature_list.append(np.asarray(features))
     return np.asarray(feature_list)
 
