@@ -22,7 +22,7 @@ test_eeg2, test_eeg2_id = DataReader.read_data("../test_eeg2.csv")
 test_emg, test_emg_id = DataReader.read_data("../test_emg.csv")
 train_labels, train_id = DataReader.read_data("../train_labels.csv")
 
-save = True
+save = False
 if save:
     X_train_eeg1 = util.get_wavelet_coeffs(train_eeg1)
     X_train_eeg1 = util.get_wavelet_features(X_train_eeg1)
@@ -62,9 +62,15 @@ X_train = DataReader.replace_infs(DataReader.replace_nans(X_train, 0.0), 0.0)
 X_test = DataReader.replace_infs(DataReader.replace_nans(X_test, 0.0), 0.0)
 print("Data prepared... Classifying...")
 
+print(X_train.shape)
+selector = SelectKBest(k=50)
+X_train = selector.fit_transform(X_train, y_train)
+X_test = selector.transform(X_test)
+print(X_train.shape)
+
 kf = KFold(n_splits=10)
 clf = SVC(gamma='auto', class_weight='balanced')
-#clf = RandomForestClassifier(n_estimators=100, class_weight='balanced')
+#clf = RandomForestClassifier(n_estimators=1000, class_weight='balanced')
 i = 0
 
 for train_index, validation_index in kf.split(X_train, y_train):
