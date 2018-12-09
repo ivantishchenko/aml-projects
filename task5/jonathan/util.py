@@ -4,6 +4,7 @@ import scipy
 import mne
 import pywt
 import math
+import sys
 
 def create_eeg(eeg):
     signals = []
@@ -111,20 +112,15 @@ def get_wavelet_features(wavelets):
     feature_list = []
     for i in range(len(wavelets)):
         features = []
-        powers = []
         coeff = wavelets[i]
         for j in range(len(coeff)):
             c = np.asarray(coeff[j])
-            features.append(np.sum(np.absolute(c) * np.absolute(c)))
-            powers.append(features[-1])
-            entropy = 0.
-            for k in range(c.shape[0]):
-                entropy = entropy + c[k] * c[k] * math.log(c[k] * c[k])
-            features.append(entropy)
+            absc = np.absolute(c)
+            features.append(np.sum(absc * absc))
             features.append(c.std())
-            features.append(np.absolute(c).mean())
+            features.append(absc.mean())
             features.append(np.max(c))
-            
+
         feature_list.append(np.asarray(features))
     return np.asarray(feature_list)
 
